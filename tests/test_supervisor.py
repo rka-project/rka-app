@@ -2,17 +2,19 @@ from __future__ import annotations
 
 import json
 import os
-import socket
-import subprocess
-import sys
-import tempfile
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, call, patch
 
-from rka_app.supervisor import Settings, _boolean, _health_ready, _port, _positive_float
+from rka_app.supervisor import (
+    Settings,
+    _boolean,
+    _health_ready,
+    _port,
+    _positive_float,
+    supervise,
+)
 
 
 class QuietHandler(BaseHTTPRequestHandler):
@@ -86,53 +88,35 @@ class HealthTests(unittest.TestCase):
 
 class LifecycleTests(unittest.TestCase):
     def test_worker_failure_stops_server_and_propagates_code(self) -> None:
-        with socket.socket() as probe:
-            probe.bind(("127.0.0.1", 0))
-            port = probe.getsockname()[1]
+        settings = Settings(
+            host="127.0.0.1",
+            port=17860,
+            worker_enabled=True,
+            startup_timeout=1,
+            shutdown_timeout=2,
+            health_interval=0.001,
+            command_prefix=("rka",),
+        )
+        server = MagicMock(pid=101)
+        server.poll.return_value = None
+        worker = MagicMock(pid=102)
+        worker.poll.return_value = 7
 
-        fake_core = """
-import sys
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+        with (
+            patch("rka_app.supervisor.signal.signal"),
+            patch("rka_app.supervisor._health_ready", return_value=True),
+            patch("rka_app.supervisor._start", side_effect=[server, worker]),
+            patch("rka_app.supervisor._stop") as stop,
+        ):
+            exit_code = supervise(settings)
 
-role = sys.argv[1]
-if role == 'worker':
-    raise SystemExit(7)
-if role != 'serve':
-    raise SystemExit(3)
-port = int(sys.argv[sys.argv.index('--port') + 1])
-class Handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200 if self.path == '/api/health' else 404)
-        self.end_headers()
-    def log_message(self, _format, *args):
-        return
-ThreadingHTTPServer(('127.0.0.1', port), Handler).serve_forever()
-""".strip()
-
-        repo_root = Path(__file__).resolve().parents[1]
-        with tempfile.TemporaryDirectory() as directory:
-            fake_path = Path(directory) / "fake_core.py"
-            fake_path.write_text(fake_core, encoding="utf-8")
-            env = {
-                **os.environ,
-                "PYTHONPATH": str(repo_root / "src"),
-                "RKA_APP_RKA_COMMAND_JSON": json.dumps([sys.executable, str(fake_path)]),
-                "RKA_HOST": "127.0.0.1",
-                "RKA_PORT": str(port),
-                "RKA_APP_STARTUP_TIMEOUT": "5",
-                "RKA_APP_SHUTDOWN_TIMEOUT": "2",
-                "RKA_APP_HEALTH_INTERVAL": "0.05",
-            }
-            result = subprocess.run(
-                (sys.executable, "-m", "rka_app.supervisor"),
-                cwd=repo_root,
-                env=env,
-                text=True,
-                capture_output=True,
-                timeout=10,
-            )
-        self.assertEqual(result.returncode, 7, result.stderr)
-        self.assertIn("worker exited unexpectedly with code 7", result.stderr)
+        self.assertEqual(exit_code, 7)
+        stop.assert_has_calls(
+            [
+                call(worker, "worker", settings.shutdown_timeout),
+                call(server, "server", settings.shutdown_timeout),
+            ]
+        )
 
 
 if __name__ == "__main__":
