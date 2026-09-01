@@ -70,8 +70,14 @@ class HealthTests(unittest.TestCase):
         thread.start()
         try:
             port = server.server_address[1]
-            self.assertTrue(_health_ready(f"http://127.0.0.1:{port}/api/health"))
-            self.assertFalse(_health_ready(f"http://127.0.0.1:{port}/missing"))
+            hostile_proxy = {
+                "HTTP_PROXY": "http://127.0.0.1:9",
+                "HTTPS_PROXY": "http://127.0.0.1:9",
+                "NO_PROXY": "",
+            }
+            with patch.dict(os.environ, hostile_proxy, clear=False):
+                self.assertTrue(_health_ready(f"http://127.0.0.1:{port}/api/health"))
+                self.assertFalse(_health_ready(f"http://127.0.0.1:{port}/missing"))
         finally:
             server.shutdown()
             server.server_close()

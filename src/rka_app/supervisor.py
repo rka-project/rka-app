@@ -20,6 +20,10 @@ import urllib.request
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+# The readiness target is always the server in this same container. Host or CI
+# proxy variables must never divert a loopback probe through an external proxy.
+_LOOPBACK_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 
 def _log(message: str) -> None:
     print(f"[rka-app] {message}", file=sys.stderr, flush=True)
@@ -122,7 +126,7 @@ class Settings:
 
 def _health_ready(url: str, timeout: float = 1.0) -> bool:
     try:
-        with urllib.request.urlopen(url, timeout=timeout) as response:
+        with _LOOPBACK_OPENER.open(url, timeout=timeout) as response:
             return 200 <= response.status < 300
     except (OSError, urllib.error.URLError):
         return False
