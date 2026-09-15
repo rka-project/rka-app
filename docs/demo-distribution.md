@@ -54,7 +54,7 @@ pack, credential, local database or model cache is part of this distribution.
 Public GHCR images allow anonymous pull. Making a package public is irreversible
 under [GitHub's current package-visibility policy](https://docs.github.com/en/packages/learn-github-packages/configuring-a-packages-access-control-and-visibility).
 
-## Release order — not yet executed
+## Release order — in progress
 
 1. Review/merge the **separate Core UI fix**, then release through Core's existing
    CI/container pipeline. App must not copy a patched Core bundle. Update App's
@@ -65,9 +65,12 @@ under [GitHub's current package-visibility policy](https://docs.github.com/en/pa
    not upload the ZIP or read any historical real-data pack.
 3. Sample downloading is enabled locally (`PUBLIC_SAMPLE_ENABLED=True`). Keep
    `PUBLIC_DEMO_ENABLED=False` until the Core/App runtime release gates pass.
-   Configure required reviewers on environment `demo-release`, grant the App
-   workflow read access to its private Core base, and require exact-green CI.
-   The YAML itself cannot establish the repository's environment-review rules.
+   The `demo-release` environment now requires maintainer approval and allows
+   only the `main` branch. The maintainer explicitly approved same-account
+   dispatch/review. App's Actions access to the Core package is **Read** only;
+   the existing Codespaces Read grant and private package visibility are unchanged.
+   These settings were read back after configuration on 2026-09-15; the YAML
+   itself cannot establish the repository's environment-review rules.
 4. Dispatch `reviewed-demo-image` with the exact main SHA and `publish=false`.
    Confirm build, non-root tests, Git and real Core restart checks. After approval,
    dispatch with `publish=true`; the public sample gate runs first. Separately
@@ -139,10 +142,17 @@ tests passed**, plus the frontend production build and the two-cycle real Core
 CLI smoke. The first capabilities run lacked sqlite-vec (9 passed/1 failed);
 supplying the existing library to the isolated test process produced 10/10.
 
-The 80 App tests and Ruff passed locally; the image-level smoke is prepared but
-not yet run. The required `demo-release` environment is not configured: creating
-its maintainer approval rule requires confirmation of the exact reviewer and
-self-review setting. Do not dispatch the image workflow before this gate exists.
+The 80 App tests and Ruff passed locally. PR #2 passed all seven CI jobs across
+Linux, Windows and macOS and was merged at
+`09112af449ecd04fd63bb0965bc7d575712e9077`. The configured approval gate precedes
+the first no-publication image validation; that run is not a runtime release.
+
+First dry run `34916443679` successfully pulled the private Core base and built
+the complete feature image, but explicit `platform` made the pinned action
+export OCI rather than load the local Docker image. The image tests therefore
+failed before running; nothing was published. The follow-up uses the checked
+native Linux/X64 runner, inspects the locally loaded image/architecture, and
+sets `docker run --pull never` so missing local output cannot trigger a pull.
 
 A local prebuilt-image validation was attempted with Dev Containers CLI 0.89.0
 using the exact private Core digest and a unique test tag, without `--push` or

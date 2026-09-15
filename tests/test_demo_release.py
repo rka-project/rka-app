@@ -55,6 +55,10 @@ class TemplateTests(unittest.TestCase):
         self.assertIn("--isolated-container", workflow)
         self.assertIn("--network none", workflow)
         self.assertIn("--user codespace", workflow)
+        self.assertIn('test "$RUNNER_OS/$RUNNER_ARCH" = "Linux/X64"', workflow)
+        self.assertNotIn("platform: linux/amd64", workflow)
+        self.assertEqual(workflow.count("docker run --pull never"), 3)
+        self.assertIn('docker image inspect "$DEMO_IMAGE"', workflow)
         self.assertIn("-run-${{ github.run_id }}-${{ github.run_attempt }}", workflow)
         self.assertNotIn("rka-demo:latest", workflow)
         for line in workflow.splitlines():
