@@ -50,14 +50,16 @@ jobs:
     env:
       # Only the separately published demo; no private Core registry grant/token.
       DEMO_IMAGE: ghcr.io/rka-project/rka-demo@sha256:aabf3c5f04ec01bc5adc3c31d9634e4db2f299c3b375fdddeddb5bd8ad7b14ae
-      DOCKER_CONFIG: ${{ runner.temp }}/rka-demo-anonymous
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           persist-credentials: false
+      - name: Isolate registry configuration without credentials
+        run: |
+          mkdir -m 700 "$RUNNER_TEMP/rka-demo-anonymous"
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/rka-demo-anonymous" >> "$GITHUB_ENV"
       - name: Pull the visitor image anonymously without building anything
         run: |
-          mkdir -m 700 "$DOCKER_CONFIG"
           docker pull "$DEMO_IMAGE"
           docker image inspect "$DEMO_IMAGE" > "$RUNNER_TEMP/rka-demo-image.json"
       - name: Verify real image metadata and merged visitor lifecycle

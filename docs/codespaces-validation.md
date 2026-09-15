@@ -22,6 +22,11 @@ change, model startup, package-permission change or homepage deployment.
   is not proof of this job; its exact-head green run is required before merge.
 - Fresh visitor lifecycle/private-port behavior, non-owner access and actual
   Codespace stop/resume remain gated. The homepage launch link stays disabled.
+- The first push at `ddbd213` was rejected by workflow validation (run
+  `35012116512`), before any job ran: `runner.temp` is not available in job-level
+  `env`. The follow-up exports the anonymous Docker config through `GITHUB_ENV`
+  from a runner step and adds a regression assertion. That failed run is not
+  test evidence; the corrected head must pass the complete CI suite.
 
 ## Batch 3 — real owner Codespace validation (2026-09-14)
 

@@ -60,7 +60,8 @@ class TemplateTests(unittest.TestCase):
         )[1]
         active = json.loads((REPO / ".devcontainer/devcontainer.json").read_text())
         self.assertIn(f"DEMO_IMAGE: {active['image']}", workflow)
-        self.assertIn("DOCKER_CONFIG: ${{ runner.temp }}/rka-demo-anonymous", workflow)
+        self.assertIn('DOCKER_CONFIG=$RUNNER_TEMP/rka-demo-anonymous', workflow)
+        self.assertNotIn("${{ runner.", workflow.split("    steps:", 1)[0])
         self.assertNotIn("secrets.", workflow)
         self.assertNotIn("login-action", workflow)
         self.assertNotIn("packages: write", workflow)
