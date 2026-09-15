@@ -1,15 +1,16 @@
-# First independent Demo image — uploaded, still private
+# First independent Demo image — public, anonymous pull verified
 
-Readback: 2026-09-15 UTC. This is not an anonymous-pull, clean-Codespace or
-homepage-launch receipt. No existing owner Codespace or local RKA was rebuilt.
+Readback: 2026-09-15 UTC. Publication and anonymous full-image download have
+passed. This is not a clean-Codespace or homepage-launch receipt. No existing
+owner Codespace or local RKA was rebuilt.
 
 ## Exact artifact
 
 - Package: `ghcr.io/rka-project/rka-demo`, ID `15087394`.
-- Visibility: **private**, with exactly **one** version.
+- Visibility: **public**, with exactly **one** version.
 - Version ID: `1249358351`.
 - Tag: `sha-72634acb75669f90b8cf29bf0f1fd793a89f08aa-run-34920780180-1`.
-- Consumer reference, pending anonymous access verification:
+- Consumer reference, verified anonymously after organization policy restoration:
 
   ```text
   ghcr.io/rka-project/rka-demo@sha256:aabf3c5f04ec01bc5adc3c31d9634e4db2f299c3b375fdddeddb5bd8ad7b14ae
@@ -41,26 +42,48 @@ homepage-launch receipt. No existing owner Codespace or local RKA was rebuilt.
 - The existing `rka-core` package remains **private**. Protected local container
   identities, images, start times, volume and 9712 mapping were unchanged.
 
-## Current authorization boundary
+## Public visibility and policy restoration
 
-The organization policy currently permits only private package creation:
+With the user's explicit action-time approval, Public package creation was
+temporarily enabled, **only `rka-demo`** was made public, and the original policy
+was immediately restored and saved. GitHub confirmed the organization settings
+update; the final policy permits only private package creation:
 
 - Public package creation: unchecked.
 - Private package creation: checked (fixed).
 - Internal package creation: unchecked.
 - Default inherited source-repository access: checked.
 
-Consequently the new package's Public visibility option is disabled, even for
-the active organization-admin account. No organization setting was changed.
+API readback confirmed `rka-demo` is public with the same single version and
+`rka-core` remains private. The organization's public container package list
+contains only `rka-demo`. No other package access or visibility was changed.
 The approved main-only `demo-release` environment and App's **Read-only** Actions
-grant on Core have already been configured and read back.
+grant on Core remain outside this visibility change.
 
-Before proceeding, obtain explicit action-time approval to temporarily allow
-organization members to publish public packages, expose **only this rka-demo
-package**, then restore the organization policy. This briefly widens the
-organization's package-creation permission; package publication is irreversible.
-Read back the policy and both package visibilities afterward.
+Package publication is irreversible: restoring the creation policy does not
+make the existing demo package private again.
 
-After that: anonymously pull the exact Demo digest, render/review the visitor
-configuration, run CI/merge, and obtain approval for any billed fresh/non-owner
-Codespace acceptance test. Keep the homepage launch path disabled until acceptance.
+## Anonymous full-image verification
+
+- Downloaded the exact manifest, configuration and all **19** image layers via
+  the registry API after the organization policy was restored.
+- Verified SHA-256 digests and declared byte sizes for every layer, totaling
+  **258,465,349 compressed bytes**; the manifest digest remained the approved
+  `aabf3c5f...` digest above.
+- Verified Linux/amd64, the exact App revision and the Core image-reference
+  provenance label against the approved values above.
+- Used an empty process environment and an anonymous, pull-scoped registry
+  bearer, with no account token, credential helper, cookie jar or proxy.
+  Redirects were HTTPS-only, restricted to registry/blob hosts, and stripped
+  authorization headers.
+- Streamed and hashed the layers without storing them, extracting files,
+  accessing the Docker daemon or starting a container. This verifies anonymous
+  registry distribution, not a new Docker-engine or Codespace startup.
+
+## Remaining launch gate
+
+The visitor configuration now pins the verified digest and inherits the image's
+single startup hook. The renderer no longer repeats that hook. Require green
+exact-head consumer CI/merge, then obtain approval for any billed fresh/non-owner
+Codespace acceptance test.
+Keep the homepage launch path disabled until acceptance.

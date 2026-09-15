@@ -12,13 +12,16 @@ plus guarded automatic first-use setup and resume. Start with
 [operator/release gates](docs/codespaces-demo.md). Cloud image tests have verified
 non-root Git, separate SSH identities, sample import, Map/Graph/Missions and
 edit retention across Core restarts. Those results do not prove fresh visitor
-startup or non-owner access. **Final image publication and clean visitor
-acceptance remain pending; the homepage launch path is not enabled.**
+startup or non-owner access. **The independent demo image is public and its
+complete anonymous download is verified. Clean visitor acceptance remains
+pending; the homepage launch path is not enabled.**
 RKA remains local-first, not a shared hosted service.
 
 The candidate includes bounded private-port registration waiting, checksum-pinned
 fetching of the published fictional sample, and a manually approved prebuilt
-image pipeline. Only this synthetic sample is fetched; credentials and real
+image pipeline. The default `.devcontainer/devcontainer.json` consumes that
+reviewed image by digest, without rebuilding Core or Dev Container features.
+Its single startup hook is inherited from the image. Only this synthetic sample is fetched; credentials and real
 research archives are not distributed. See
 [the distribution and migration runbook](docs/demo-distribution.md) for what is
 implemented versus what still needs approval/publication and a clean visitor test.
@@ -107,7 +110,11 @@ The candidate targets released **Core v3.0.1**, including truthful hybrid/keywor
 only search status. Its exact base image is recorded in `.devcontainer/Dockerfile`;
 sample initialization checks the same Core version. The existing Core package
 remains private. App has narrowly scoped Actions/Codespaces Read access, not
-permission to expose Core's package history. Visitors will consume the separate
-reviewed `rka-demo` image by digest once published and anonymously verified.
+permission to expose Core's package history. The visitor configuration now
+consumes the separate, anonymously verified `rka-demo` image by digest. See
+[the image publication receipt](docs/demo-image-v1-publication.md) for the exact
+image and App revision. App runtime code is baked into that image; editing the
+checkout does not upgrade it. Maintainers build new images with
+`.devcontainer/image/devcontainer.json`, not the visitor configuration.
 Old Core 3.0.0 operator evidence remains in the runbook, not a new-release claim.
 There is no fallback to `latest` or to a developer's running local installation.

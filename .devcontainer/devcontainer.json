@@ -1,28 +1,9 @@
 {
   "name": "RKA private Codespaces demo (experimental)",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": "..",
-    "args": { "RKA_APP_REVISION": "${localEnv:GITHUB_SHA:unreleased}" }
-  },
+  "image": "ghcr.io/rka-project/rka-demo@sha256:aabf3c5f04ec01bc5adc3c31d9634e4db2f299c3b375fdddeddb5bd8ad7b14ae",
   "overrideCommand": true,
   "remoteUser": "codespace",
   "updateRemoteUserUID": true,
-  "features": {
-    "ghcr.io/devcontainers/features/common-utils:2.5.9": {
-      "username": "codespace",
-      "userUid": "1000",
-      "userGid": "1000",
-      "installZsh": false,
-      "installOhMyZsh": false,
-      "installOhMyZshConfig": false,
-      "upgradePackages": false
-    },
-    "ghcr.io/devcontainers/features/sshd:1.1.0": { "gatewayPorts": "no" },
-    "./features/ssh-host-identity": {},
-    "ghcr.io/devcontainers/features/github-cli:1.1.2": { "version": "2.98.0" }
-  },
-  "postStartCommand": ["/app/.venv/bin/python", "-m", "rka_app.codespaces_bootstrap"],
   "customizations": {
     "codespaces": { "openFiles": ["WELCOME.md"] }
   },
