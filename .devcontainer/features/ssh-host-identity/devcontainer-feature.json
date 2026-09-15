@@ -1,0 +1,7 @@
+{
+  "id": "ssh-host-identity",
+  "version": "1.0.0",
+  "name": "Per-container SSH host identity",
+  "description": "Generate missing SSH host keys on startup, never in the published image.",
+  "installsAfter": ["ghcr.io/devcontainers/features/sshd"]
+}

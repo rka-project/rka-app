@@ -9,7 +9,13 @@ LABEL org.opencontainers.image.title="RKA user-owned demo" \
 
 # Tools needed by the development container, not a second RKA runtime.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git curl procps openssh-client \
+    && apt-get install -y --no-install-recommends git curl procps openssh-client openssh-server lsof \
+    # Remove generated host identities IN THE INSTALL LAYER, not in a later one.
+    # The sshd feature sees these packages already installed. Its ordered local
+    # companion generates fresh identities when each container first starts.
+    && rm -f /etc/ssh/ssh_host_rsa_key /etc/ssh/ssh_host_rsa_key.pub \
+             /etc/ssh/ssh_host_ecdsa_key /etc/ssh/ssh_host_ecdsa_key.pub \
+             /etc/ssh/ssh_host_ed25519_key /etc/ssh/ssh_host_ed25519_key.pub \
     && rm -rf /var/lib/apt/lists/*
 
 COPY src/rka_app /opt/rka-app/rka_app

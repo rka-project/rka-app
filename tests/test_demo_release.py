@@ -37,6 +37,10 @@ class TemplateTests(unittest.TestCase):
         if "image" in active:
             self.assertEqual(active, module.render(active["image"], self.config))
         else:
+            # Local feature paths are relative to their respective config files.
+            active["features"]["../features/ssh-host-identity"] = active["features"].pop(
+                "./features/ssh-host-identity"
+            )
             self.assertEqual(
                 {k: v for k, v in active.items() if k != "build"},
                 {k: v for k, v in self.config.items() if k != "build"},
