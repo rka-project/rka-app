@@ -1,6 +1,10 @@
 {
   "name": "RKA private Codespaces demo (experimental)",
-  "build": { "dockerfile": "../Dockerfile", "context": "../.." },
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "../..",
+    "args": { "RKA_APP_REVISION": "${localEnv:GITHUB_SHA:unreleased}" }
+  },
   "overrideCommand": true,
   "remoteUser": "codespace",
   "updateRemoteUserUID": true,

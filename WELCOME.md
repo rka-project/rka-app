@@ -1,20 +1,26 @@
 # Your RKA research demo
 
-**Developer preview — public one-click startup is not released yet.**
-The newest source candidate uses a non-root development user. Existing root
+**Release candidate — final image publication and clean visitor acceptance are
+not complete. Do not create a billed Codespace from this guide yet.**
+The source uses a non-root development user. Existing root
 previews must follow [the migration runbook](docs/demo-distribution.md) before
 rebuilding; automatic startup never rewrites ownership of an existing database.
-The first start stays idle until the operator completes the private-start procedure
-in [the deployment guide](docs/codespaces-demo.md). Automatic resume is an opt-in
-candidate: it requires a fresh Private-port check and reuses existing sample data.
+The intended first start checks Private forwarding, fetches only the verified
+fictional sample and starts the supervised Core server and worker. Resumes check
+Private forwarding again and reuse existing sample data, including your edits.
 Opening this file or seeing a saved status is not a server-ready signal. Do not
 enter credentials to work around an image-pull error.
 
-After the separate public-release gate is opened, a fresh Codespace will fetch
-the checksum-pinned fictional sample and start automatically. Until then,
-bootstrap stays idle without an existing opt-in. If port registration times out,
-forward 7860 as **Private** in the Ports panel and retry bootstrap; do not change
-the visibility to Public. This is bounded retry, not an endless startup loop.
+If port registration times out, forward 7860 as **Private** in the Ports panel,
+then retry setup in the Codespace terminal:
+
+```bash
+/app/.venv/bin/python -m rka_app.codespaces_bootstrap
+```
+
+Do not change visibility to Public. Retry is bounded, not an endless startup loop.
+Existing disabled or uncertain state is retained, not silently re-enabled/reset.
+See [the deployment guide](docs/codespaces-demo.md) for operator-only manual mode.
 
 The intended trial runs in **your GitHub Codespace**, not RKA Project's server.
 Use only fictional or non-sensitive content here. RKA remains local-first.
@@ -23,7 +29,7 @@ Use only fictional or non-sensitive content here. RKA remains local-first.
 
 Open **Ports → 7860 → Open in Browser**, keeping visibility **Private**.
 Select **UrbanHeat Research Showcase — SYNTHETIC DEMO** in the project selector.
-Core 3.0 currently requires that selection; this preview does not change browser
+Core 3.0.1 requires that selection; this preview does not change browser
 storage or pretend the project was selected for you.
 
 If automatic startup fails, leave the data in place. Ask the operator to inspect
@@ -56,8 +62,10 @@ records, not real approvals or instructions to execute experiments.
 
 Try keyword search for **calibration**, **outages**, **abstention**, or **retention**.
 This demo turns embeddings off and requires no model download or AI API key.
-If the Core first-run banner describes semantic search, that is not this demo's
-runtime status. No Codex or Claude client is automatically connected.
+Core 3.0.1's banner and header derive their status from runtime capabilities;
+this sample runs in keyword-only mode. A missing/stale capability response is
+shown as unconfirmed, not as evidence that embeddings are running.
+No Codex or Claude client is automatically connected.
 
 ## Keep your work, then stop the machine
 

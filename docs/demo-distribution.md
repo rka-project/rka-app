@@ -22,8 +22,8 @@ pack, credential, local database or model cache is part of this distribution.
   missing authorization and CLI errors fail immediately. Core does not start
   while waiting. If registration times out, forward 7860 as Private and retry
   bootstrap. The adapter never changes visibility.
-- Public first-use provisioning is implemented but **release-gated off**. Once
-  released it fetches the exact fictional ZIP, verifies it, writes the opt-in,
+- First-use provisioning is enabled in the **Core 3.0.1 release candidate**.
+  After image publication it fetches the exact fictional ZIP, verifies it, writes the opt-in,
   and starts the supervisor. Resumes preserve disabled/corrupt/uncertain state;
   no automatic reset, reimport or re-enable after opt-out.
 - Downloads use HTTPS without proxy/auth/cookie environment, the exact Release
@@ -61,15 +61,18 @@ under [GitHub's current package-visibility policy](https://docs.github.com/en/pa
 
 ## Release order — in progress
 
-1. Review/merge the **separate Core UI fix**, then release through Core's existing
-   CI/container pipeline. App must not copy a patched Core bundle. Update App's
-   FROM/provenance digest, `SHOWCASE.core_version` and associated pin tests to
-   that released version. Current App still consumes Core 3.0.0 and its old UI.
+1. **Completed:** the separate Core UI fix is merged/released as 3.0.1 through
+   Core's CI/container pipeline. App's FROM/provenance digest, sample version
+   and pin tests now consume that verified release, not a copied Core patch:
+
+   ```text
+   ghcr.io/rka-project/rka-core@sha256:19a7ac4098e536930d395a1730ad5b57b082f769e784b40221312bc93cad00f7
+   ```
 2. **Completed:** approval for both exact artifacts; fictional ZIP publication;
    anonymous download and SHA/manifest verification. The image pipeline does
    not upload the ZIP or read any historical real-data pack.
-3. Sample downloading is enabled locally (`PUBLIC_SAMPLE_ENABLED=True`). Keep
-   `PUBLIC_DEMO_ENABLED=False` until the Core/App runtime release gates pass.
+3. Source gates `PUBLIC_SAMPLE_ENABLED` and `PUBLIC_DEMO_ENABLED` are enabled.
+   This is not proof of a published image or a successful fresh-user Codespace.
    The `demo-release` environment now requires maintainer approval and allows
    only the `main` branch. The maintainer explicitly approved same-account
    dispatch/review. App's Actions access to the Core package is **Read** only;
@@ -195,6 +198,34 @@ any again, and generates missing keys at container startup. Five regression
 tests cover layer scanning (including a later-layer deletion), configuration
 false positives and ordering. All-layer and real SSH startup validation are
 mandatory before publication; unit tests alone do not prove this fix in an image.
+
+SSH follow-up PR #5 passed all seven CI jobs and merged at
+`1c0c957366d0201f1979564be3cf0067b789233e`. Dry run `34919358687` at that exact
+main commit **passed without publication**: 85 image unit tests, non-root Git/gh
+checks, two Core 3.0.0 sample/edit/restart cycles, every saved image layer free
+of host key files, two containers with distinct public SSH fingerprints and
+stable identities on repeat startup. Password/interactive authentication stayed
+disabled and GatewayPorts stayed off. This validates the SSH fix, not a final
+Core 3.0.1 image or new/non-owner Codespace.
+
+Core publication run `34918034712`, attempt 1, was cancelled after its ARM64
+`npm ci` stopped progressing. The retained complete log exposes
+`qemu: uncaught target signal 4 (Illegal instruction)` in the ARM64 web-builder
+stage. No 3.0.1 image had been published; package versions and private visibility
+were read back. One retry of the same release commit was dispatched without
+changing the tag, source or validation gates. Do not replace App's Core digest
+until a complete successful publication and exact-digest validation are recorded.
+
+Attempt 2 passed the ARM64 build, both-architecture manifest check, published-
+digest startup smoke and provenance attestation verification. It published the
+Core 3.0.1 runtime index
+`sha256:19a7ac4098e536930d395a1730ad5b57b082f769e784b40221312bc93cad00f7`.
+The candidate now pins that exact digest and opens first-use provisioning for
+reviewed image validation. App OCI version/revision identify App (not inherited
+Core metadata); the separate Core digest label retains dependency provenance.
+The image workflow verifies App's revision equals the exact reviewed main SHA.
+The final 3.0.1-based Demo image still must pass its own no-publication run before
+publishing, anonymous pull, visitor configuration and clean Codespace acceptance.
 
 A local prebuilt-image validation was attempted with Dev Containers CLI 0.89.0
 using the exact private Core digest and a unique test tag, without `--push` or

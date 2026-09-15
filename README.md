@@ -5,22 +5,21 @@ Installation, lifecycle supervision, and deployment adapters for
 
 > **Foundation 0 status:** experimental and not yet an end-user release.
 
-The next adapter is a **user-owned GitHub Codespaces trial**. The local candidate
-adds a guarded private launcher, one-time fictional sample import and restart
-protection, plus an opt-in automatic-resume controller. Start with
+The next adapter is a **user-owned GitHub Codespaces trial**. It adds a non-root
+private launcher, one-time fictional sample import and restart protection,
+plus guarded automatic first-use setup and resume. Start with
 [the welcome guide](WELCOME.md) and
-[operator/release gates](docs/codespaces-demo.md). A real isolated Core CLI smoke
-has passed. The owner's existing Codespace has built the adapter from the pinned
-Core image, passed 59 Linux tests and started the fictional sample privately.
-An actual stop/resume also recovered both processes automatically and retained
-the same project and Map/Graph/Missions data.
-This remains an operator preview, not a verified public one-click path.
-It does not make RKA a hosted service.
+[operator/release gates](docs/codespaces-demo.md). Cloud image tests have verified
+non-root Git, separate SSH identities, sample import, Map/Graph/Missions and
+edit retention across Core restarts. Those results do not prove fresh visitor
+startup or non-owner access. **Final image publication and clean visitor
+acceptance remain pending; the homepage launch path is not enabled.**
+RKA remains local-first, not a shared hosted service.
 
-The next candidate adds a non-root Codespaces user, bounded private-port
-registration waiting, checksum-pinned fetching of the now-published fictional
-sample, and a manually dispatched prebuilt-demo-image pipeline. Automatic public
-runtime setup remains independently gated off. See
+The candidate includes bounded private-port registration waiting, checksum-pinned
+fetching of the published fictional sample, and a manually approved prebuilt
+image pipeline. Only this synthetic sample is fetched; credentials and real
+research archives are not distributed. See
 [the distribution and migration runbook](docs/demo-distribution.md) for what is
 implemented versus what still needs approval/publication and a clean visitor test.
 
@@ -104,11 +103,11 @@ fixed container names, port, and volume can collide with a live installation.
 
 ## Release dependency
 
-RKA Core v3.0.0 has a successful multi-architecture GHCR publication. The
-Codespaces adapter pins that release's immutable digest. The package remains
-private; the owner has granted `rka-project/rka-app` read access through the
-package's Codespaces settings. On 2026-09-14 the intended owner
-Codespace successfully pulled the exact pinned digest. A subsequent private
-validation rebuilt the adapter and started Core 3.0.0 with the fictional sample.
-This is not proof that a new user's Codespace can pull the private package.
+The candidate targets released **Core v3.0.1**, including truthful hybrid/keyword-
+only search status. Its exact base image is recorded in `.devcontainer/Dockerfile`;
+sample initialization checks the same Core version. The existing Core package
+remains private. App has narrowly scoped Actions/Codespaces Read access, not
+permission to expose Core's package history. Visitors will consume the separate
+reviewed `rka-demo` image by digest once published and anonymously verified.
+Old Core 3.0.0 operator evidence remains in the runbook, not a new-release claim.
 There is no fallback to `latest` or to a developer's running local installation.

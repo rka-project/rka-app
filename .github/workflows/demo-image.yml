@@ -85,6 +85,7 @@ jobs:
         run: |
           docker image inspect "$DEMO_IMAGE" --format '{{.Id}} {{.Os}}/{{.Architecture}}'
           test "$(docker image inspect "$DEMO_IMAGE" --format '{{.Os}}/{{.Architecture}}')" = "linux/amd64"
+          test "$(docker image inspect "$DEMO_IMAGE" --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "$GITHUB_SHA"
           docker run --pull never --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-unit" --user codespace --entrypoint /app/.venv/bin/python \
             --mount "type=bind,source=$GITHUB_WORKSPACE,target=/verify,readonly" \
             --workdir /verify --env HOME=/home/codespace --env PYTHONPATH=/verify/src "$DEMO_IMAGE" \

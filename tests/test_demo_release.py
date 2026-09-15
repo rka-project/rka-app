@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import tomllib
 import unittest
 from pathlib import Path
 
@@ -45,6 +46,18 @@ class TemplateTests(unittest.TestCase):
                 {k: v for k, v in active.items() if k != "build"},
                 {k: v for k, v in self.config.items() if k != "build"},
             )
+
+    def test_app_provenance_does_not_inherit_the_core_revision(self):
+        dockerfile = (REPO / ".devcontainer/Dockerfile").read_text()
+        project = tomllib.loads((REPO / "pyproject.toml").read_text())["project"]
+        self.assertIn(f'org.opencontainers.image.version="{project["version"]}"', dockerfile)
+        self.assertIn('org.opencontainers.image.revision="${RKA_APP_REVISION}"', dockerfile)
+        self.assertEqual(
+            self.config["build"]["args"]["RKA_APP_REVISION"],
+            "${localEnv:GITHUB_SHA:unreleased}",
+        )
+        workflow = (REPO / ".github/workflows/demo-image.yml").read_text()
+        self.assertIn('org.opencontainers.image.revision"}}\')" = "$GITHUB_SHA"', workflow)
 
     def test_image_publication_is_reviewed_and_tests_the_nonroot_runtime(self):
         workflow = (REPO / ".github/workflows/demo-image.yml").read_text()

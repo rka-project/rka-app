@@ -39,6 +39,7 @@ SHOWCASE = Sample(
     sha256="25f3b45396bdaa9dc3cff9d7a50c2e705204a8c6b2137cfb35927c6b2cc91a0f",
     project_name="UrbanHeat Research Showcase — SYNTHETIC DEMO",
     source_project_id="prj_01M2GSH6JN24MVDXBM56Q5Q3BM",
+    core_version="3.0.1",
 )
 
 
