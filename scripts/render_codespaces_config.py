@@ -19,6 +19,10 @@ def render(image: str, source: dict) -> dict:
         raise ValueError("Use the reviewed rka-demo digest, never a tag or private Core image")
     if source.get("remoteUser") != "codespace" or source.get("forwardPorts") != [7860]:
         raise ValueError("Unexpected source user/port policy")
+    if source.get("postStartCommand") != [
+        "/app/.venv/bin/python", "-m", "rka_app.codespaces_bootstrap"
+    ]:
+        raise ValueError("Unexpected source startup policy")
     allowed = {
         "name",
         "overrideCommand",
@@ -32,9 +36,15 @@ def render(image: str, source: dict) -> dict:
     }
     if set(source) - allowed - {"build", "features"}:
         raise ValueError("Unexpected source configuration; review before rendering")
-    # Features are already built into the image with devcontainer metadata.
+    # Features and the lifecycle hook are already in devcontainer.metadata.
+    # Lifecycle hooks are accumulated, not overridden: repeating postStartCommand
+    # here would execute bootstrap twice. CI verifies the merged image config.
     # Do not rebuild apt, Core or feature layers on the visitor's billed machine.
-    return {"image": image, **{key: value for key, value in source.items() if key in allowed}}
+    return {
+        "image": image,
+        **{key: value for key, value in source.items()
+           if key in allowed and key != "postStartCommand"},
+    }
 
 
 def main() -> None:

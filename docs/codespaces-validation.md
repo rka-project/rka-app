@@ -1,5 +1,33 @@
 # Codespaces trial: validation record
 
+## Published-image consumer configuration — local validation (2026-09-15)
+
+Scope: App's isolated checkout only. No new or rebuilt Codespace, local Core
+change, model startup, package-permission change or homepage deployment.
+
+- The independent demo image and fictional sample are already public; see the
+  [image receipt](demo-image-v1-publication.md) for the exact digest and anonymous
+  full-image verification. Core 3.0.1 is baked into the image.
+- The default visitor config now references only that image, not a Dockerfile
+  or Features build. Maintainers retain the separate image build recipe.
+- Anonymous inspection of the actual image confirmed its metadata already
+  contains the bootstrap hook. Dev Containers accumulates lifecycle commands;
+  the renderer now omits a duplicate `postStartCommand` and rejects an unexpected
+  source hook. A regression test requires exactly one inherited bootstrap.
+- **88 unit tests and Ruff passed locally** on macOS / Python 3.12. Unit tests
+  used temporary state/ephemeral test ports; no production data or Docker daemon.
+- Added a separate CI consumer job for anonymous Docker pull, real merged
+  metadata (CLI 0.89.0), installed App tests (no source override), non-root Git/gh,
+  and isolated Core import/graph/map/missions/edit/restart checks. Local success
+  is not proof of this job; its exact-head green run is required before merge.
+- Fresh visitor lifecycle/private-port behavior, non-owner access and actual
+  Codespace stop/resume remain gated. The homepage launch link stays disabled.
+- The first push at `ddbd213` was rejected by workflow validation (run
+  `35012116512`), before any job ran: `runner.temp` is not available in job-level
+  `env`. The follow-up exports the anonymous Docker config through `GITHUB_ENV`
+  from a runner step and adds a regression assertion. That failed run is not
+  test evidence; the corrected head must pass the complete CI suite.
+
 ## Batch 3 — real owner Codespace validation (2026-09-14)
 
 Scope: only the maintainer's existing private Codespace in `rka-project/rka-app`.

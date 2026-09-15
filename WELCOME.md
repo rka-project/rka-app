@@ -1,7 +1,11 @@
 # Your RKA research demo
 
-**Release candidate — final image publication and clean visitor acceptance are
-not complete. Do not create a billed Codespace from this guide yet.**
+**Controlled trial — the public image and fictional sample are available, but
+clean visitor acceptance is not complete. Do not create a billed Codespace from
+this guide without the operator's approval yet.**
+The default configuration pulls one reviewed image by digest. It needs no
+registry PAT or private Core package grant and does not rebuild Core/features.
+The startup hook is already included in the image; do not add a second one.
 The source uses a non-root development user. Existing root
 previews must follow [the migration runbook](docs/demo-distribution.md) before
 rebuilding; automatic startup never rewrites ownership of an existing database.
@@ -10,6 +14,8 @@ fictional sample and starts the supervised Core server and worker. Resumes check
 Private forwarding again and reuse existing sample data, including your edits.
 Opening this file or seeing a saved status is not a server-ready signal. Do not
 enter credentials to work around an image-pull error.
+SSH remains key-only; do not set a password or enable password authentication
+in response to generic guidance from an upstream Dev Container feature.
 
 If port registration times out, forward 7860 as **Private** in the Ports panel,
 then retry setup in the Codespace terminal:

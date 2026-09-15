@@ -41,3 +41,100 @@ jobs:
             exit 1
           fi
           grep -Eq "base name.*empty|RKA_CORE_IMAGE|invalid reference" build-error.log
+
+  published-demo-consumer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      # Only the separately published demo; no private Core registry grant/token.
+      DEMO_IMAGE: ghcr.io/rka-project/rka-demo@sha256:aabf3c5f04ec01bc5adc3c31d9634e4db2f299c3b375fdddeddb5bd8ad7b14ae
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Isolate registry configuration without credentials
+        run: |
+          mkdir -m 700 "$RUNNER_TEMP/rka-demo-anonymous"
+          echo "DOCKER_CONFIG=$RUNNER_TEMP/rka-demo-anonymous" >> "$GITHUB_ENV"
+      - name: Pull the visitor image anonymously without building anything
+        run: |
+          docker pull "$DEMO_IMAGE"
+          docker image inspect "$DEMO_IMAGE" > "$RUNNER_TEMP/rka-demo-image.json"
+      - name: Verify real image metadata and merged visitor lifecycle
+        run: |
+          npm exec --yes --package=@devcontainers/cli@0.89.0 -- devcontainer read-configuration \
+            --workspace-folder "$GITHUB_WORKSPACE" --include-merged-configuration \
+            > "$RUNNER_TEMP/rka-demo-merged.json"
+          python - <<'PY'
+          import json, os
+          from pathlib import Path
+          root = Path(os.environ["RUNNER_TEMP"])
+          image = json.loads((root / "rka-demo-image.json").read_text())[0]
+          active = json.loads(Path(".devcontainer/devcontainer.json").read_text())
+          builder = json.loads(Path(".devcontainer/image/devcontainer.json").read_text())
+          merged = json.loads((root / "rka-demo-merged.json").read_text())["mergedConfiguration"]
+          assert active["image"] == os.environ["DEMO_IMAGE"]
+          assert active["image"] in image["RepoDigests"]
+          assert (image["Os"], image["Architecture"]) == ("linux", "amd64")
+          labels = image["Config"]["Labels"]
+          assert labels["org.opencontainers.image.revision"] == "72634acb75669f90b8cf29bf0f1fd793a89f08aa"
+          assert labels["org.rka.core.image-ref"] == (
+              "ghcr.io/rka-project/rka-core@sha256:"
+              "19a7ac4098e536930d395a1730ad5b57b082f769e784b40221312bc93cad00f7"
+          )
+          assert merged["postStartCommands"] == [builder["postStartCommand"]]
+          assert merged["entrypoints"] == ["/usr/local/share/ssh-init.sh"]
+          for key in ("remoteUser", "updateRemoteUserUID", "overrideCommand",
+                      "forwardPorts", "portsAttributes", "otherPortsAttributes"):
+              assert merged[key] == builder[key], key
+          for key in ("build", "features", "postStartCommand", "initializeCommand"):
+              assert key not in active, key
+          for key in ("privileged", "mounts", "capAdd", "securityOpt", "remoteEnv", "containerEnv",
+                      "onCreateCommands", "updateContentCommands", "postCreateCommands", "postAttachCommands"):
+              assert not merged.get(key), key
+          print("PASS: exact public image; one inherited bootstrap; non-root and private-port policy retained")
+          PY
+      - name: Fetch only the pinned fictional sample into disposable runner storage
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from rka_app.demo_distribution import download_sample
+          folder = Path(os.environ["RUNNER_TEMP"]).resolve() / "consumer-demo-sample"
+          folder.mkdir(mode=0o755)
+          download_sample(folder).chmod(0o644)
+          PY
+      - name: Test the installed App and tools as the visitor user
+        run: |
+          # No source override: imports must resolve to App already in the image.
+          docker run --pull never --rm --network none --user codespace --env HOME=/home/codespace \
+            --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-consumer-unit" \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/verify,readonly" --workdir /verify \
+            --entrypoint /app/.venv/bin/python "$DEMO_IMAGE" -B -m unittest discover -s tests -q
+          docker run --pull never --rm --network none --user codespace --env HOME=/home/codespace \
+            --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-consumer-git" \
+            --entrypoint /bin/bash "$DEMO_IMAGE" -c '
+              set -eu
+              test "$(id -u)" = 1000
+              test "$(id -un)" = codespace
+              export PATH=/usr/local/bin:/usr/bin:/bin
+              gh --version | grep -Eq "^gh version 2[.]98[.]0 "
+              if git config --get-all safe.directory | grep -Fxq "*"; then exit 1; fi
+              demo_git_dir=$(mktemp -d)
+              git init -q "$demo_git_dir"
+              git -C "$demo_git_dir" status --porcelain
+            '
+      - name: Verify installed Core sample, graph, map, missions and restart retention
+        run: |
+          docker run --pull never --rm --network none --user codespace --env HOME=/home/codespace \
+            --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-consumer-runtime" \
+            --entrypoint /app/.venv/bin/python \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts,target=/verify-scripts,readonly" \
+            --mount "type=bind,source=$RUNNER_TEMP/consumer-demo-sample,target=/sample,readonly" \
+            "$DEMO_IMAGE" -B /verify-scripts/demo_seed_smoke.py --isolated-container \
+            --core-cli /app/.venv/bin/rka --sqlite-vec /usr/local/lib/vec0.so \
+            --sample-pack /sample/reviewed-showcase.rka-pack.zip

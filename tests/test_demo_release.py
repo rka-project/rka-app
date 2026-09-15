@@ -24,28 +24,58 @@ class TemplateTests(unittest.TestCase):
         self.assertEqual(result["image"], image)
         self.assertNotIn("build", result)
         self.assertNotIn("features", result)
+        self.assertNotIn("postStartCommand", result)
         for key in (
             "remoteUser",
             "updateRemoteUserUID",
-            "postStartCommand",
             "forwardPorts",
             "portsAttributes",
         ):
             self.assertEqual(result[key], self.config[key])
 
-    def test_builder_and_operator_policy_do_not_drift(self):
+    def test_active_visitor_uses_the_reviewed_image_and_matches_builder_policy(self):
         active = json.loads((REPO / ".devcontainer/devcontainer.json").read_text())
-        if "image" in active:
-            self.assertEqual(active, module.render(active["image"], self.config))
-        else:
-            # Local feature paths are relative to their respective config files.
-            active["features"]["../features/ssh-host-identity"] = active["features"].pop(
-                "./features/ssh-host-identity"
-            )
-            self.assertEqual(
-                {k: v for k, v in active.items() if k != "build"},
-                {k: v for k, v in self.config.items() if k != "build"},
-            )
+        self.assertEqual(
+            active["image"],
+            "ghcr.io/rka-project/rka-demo@sha256:"
+            "aabf3c5f04ec01bc5adc3c31d9634e4db2f299c3b375fdddeddb5bd8ad7b14ae",
+        )
+        self.assertEqual(active, module.render(active["image"], self.config))
+
+    def test_bootstrap_is_inherited_once_and_unexpected_hooks_are_refused(self):
+        active = json.loads((REPO / ".devcontainer/devcontainer.json").read_text())
+        # Dev Containers collects lifecycle hooks from the image and config.
+        hooks = [entry["postStartCommand"] for entry in [self.config, active]
+                 if "postStartCommand" in entry]
+        self.assertEqual(hooks, [self.config["postStartCommand"]])
+        for command in (None, "echo unreviewed", ["another", "command"]):
+            with self.subTest(command=command), self.assertRaises(ValueError):
+                module.render(active["image"], {**self.config, "postStartCommand": command})
+        with self.assertRaises(ValueError):
+            module.render(active["image"], {**self.config, "postCreateCommand": "unreviewed"})
+
+    def test_published_consumer_ci_is_anonymous_and_uses_installed_runtime(self):
+        workflow = (REPO / ".github/workflows/test.yml").read_text().split(
+            "  published-demo-consumer:", 1
+        )[1]
+        active = json.loads((REPO / ".devcontainer/devcontainer.json").read_text())
+        self.assertIn(f"DEMO_IMAGE: {active['image']}", workflow)
+        self.assertIn('DOCKER_CONFIG=$RUNNER_TEMP/rka-demo-anonymous', workflow)
+        self.assertNotIn("${{ runner.", workflow.split("    steps:", 1)[0])
+        self.assertNotIn("secrets.", workflow)
+        self.assertNotIn("login-action", workflow)
+        self.assertNotIn("packages: write", workflow)
+        self.assertIn("persist-credentials: false", workflow)
+        self.assertIn('docker pull "$DEMO_IMAGE"', workflow)
+        self.assertIn("--include-merged-configuration", workflow)
+        self.assertIn('merged["postStartCommands"] == [builder["postStartCommand"]]', workflow)
+        self.assertIn("--network none", workflow)
+        self.assertIn("--user codespace", workflow)
+        self.assertIn("--isolated-container", workflow)
+        self.assertNotIn("PYTHONPATH=/verify/src", workflow)
+        for line in workflow.splitlines():
+            if "uses:" in line:
+                self.assertRegex(line.rsplit("@", 1)[1], r"^[a-f0-9]{40}$")
 
     def test_app_provenance_does_not_inherit_the_core_revision(self):
         dockerfile = (REPO / ".devcontainer/Dockerfile").read_text()

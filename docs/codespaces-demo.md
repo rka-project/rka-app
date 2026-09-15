@@ -1,10 +1,14 @@
 # User-owned GitHub Codespaces trial
 
-Status: **owner-private operator preview, not a public one-click deployment**.
+Status: **public image ready, controlled visitor trial awaiting clean acceptance**.
 RKA App owns this adapter. Released Core owns all data and public APIs.
 RKA remains local-first; this is not a shared hosted service.
 
-**Release candidate, not deployed in the existing owner Codespace:** non-root
+**Not deployed in the existing owner Codespace:** the default visitor config now
+pulls the [public demo image by immutable digest](demo-image-v1-publication.md),
+instead of building Core/features. It inherits one bootstrap hook from that
+image. The stable maintainer recipe is `.devcontainer/image/devcontainer.json`.
+The image includes a non-root
 user, per-container SSH identity, bounded port waiting, sample fetching and
 automatic first-use setup. Core 3.0.1 supplies truthful keyword-only status.
 See [distribution/migration](demo-distribution.md) before rebuilding the existing
@@ -28,8 +32,9 @@ root-owned preview. Historical cloud evidence below applies to batch 3 only.
   A pinned SHA-256 and bounded manifest-only ZIP check precede the public REST
   import. No Core imports, direct DB access or archive extraction. The fictional
   sample is published and first-use provisioning is enabled in the candidate.
-  Final image publication, anonymous pull and clean visitor acceptance remain
-  required; an enabled source flag does not prove those external results.
+  Image publication and anonymous pull are verified separately in the image
+  receipt; clean visitor acceptance is still required. An enabled source flag
+  alone does not prove any of those external results.
 - Durable import intent before POST; successful response and project readback
   before a ready receipt. Restart reuses that project without reimporting,
   renaming, comparing edited counts, or requiring the original ZIP.
@@ -200,11 +205,12 @@ archive remains separate, unchanged, and not approved for public distribution.
 
 ## Public release gates — still required
 
-1. The reviewed App substrate and SSH identity fix are merged. Release the exact
-   Core 3.0.1-based image through the approved environment after its own image tests.
-2. Public distribution of a separate demo image and fictional ZIP is approved;
-   the existing Core package must remain private. Build/verify the new image and
-   test a non-owner account before enabling the public visitor path.
+1. Completed: the reviewed Core 3.0.1-based demo image passed the approved image
+   pipeline and was published independently. The default visitor config pins it;
+   require exact-head consumer CI before merging that configuration.
+2. Completed: the separate demo image and fictional ZIP are public and verified
+   by anonymous downloads. The existing Core package remains private. Test a
+   non-owner account before enabling the homepage visitor path.
 3. Completed: exact sample publication, anonymous verification and local download
    gate. No arbitrary URL input, credentials, archive extraction or `latest`
    fallback. The source runtime gate is open, not the homepage visitor path.

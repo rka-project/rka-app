@@ -1,8 +1,10 @@
 # User-owned demo distribution and non-root migration
 
-Status: **fictional sample published; image/runtime still an implementation
-candidate, not rebuilt in the owner's running Codespace**. See the
-[publication receipt](demo-showcase-v1-publication.md). Core and App remain separate release units. No real research
+Status: **fictional sample and independent demo image published; default visitor
+configuration pinned; fresh/non-owner acceptance still pending**. Nothing was
+rebuilt in the owner's running Codespace. See the
+[sample receipt](demo-showcase-v1-publication.md) and
+[image receipt](demo-image-v1-publication.md). Core and App remain separate release units. No real research
 pack, credential, local database or model cache is part of this distribution.
 
 ## This batch
@@ -22,8 +24,8 @@ pack, credential, local database or model cache is part of this distribution.
   missing authorization and CLI errors fail immediately. Core does not start
   while waiting. If registration times out, forward 7860 as Private and retry
   bootstrap. The adapter never changes visibility.
-- First-use provisioning is enabled in the **Core 3.0.1 release candidate**.
-  After image publication it fetches the exact fictional ZIP, verifies it, writes the opt-in,
+- First-use provisioning is enabled in the published **Core 3.0.1 demo image**.
+  It fetches the exact fictional ZIP, verifies it, writes the opt-in,
   and starts the supervisor. Resumes preserve disabled/corrupt/uncertain state;
   no automatic reset, reimport or re-enable after opt-out.
 - Downloads use HTTPS without proxy/auth/cookie environment, the exact Release
@@ -39,11 +41,21 @@ pack, credential, local database or model cache is part of this distribution.
   tag; consumers must still use its digest. Visitors will pull that image rather
   than rebuilding Core, apt packages and features on their billed machine.
 
-## Approved public artifacts — sample published, image pending
+## Published public artifacts
 
 1. A **new, separate** `ghcr.io/rka-project/rka-demo` package with reviewed App,
    Dev Container features and a pinned released Core. Do not change visibility
    of the existing private `rka-core` package or its historical versions.
+   The default visitor configuration pins:
+
+   ```text
+   ghcr.io/rka-project/rka-demo@sha256:aabf3c5f04ec01bc5adc3c31d9634e4db2f299c3b375fdddeddb5bd8ad7b14ae
+   ```
+
+   App source is `72634acb75669f90b8cf29bf0f1fd793a89f08aa`, containing Core
+   3.0.1. All 19 layers (258,465,349 compressed bytes) were downloaded anonymously
+   and digest-verified after the organization's temporary public-creation
+   permission was restored to off. The old Core package remains private.
 2. `rka-project/rka-app` Release `demo-showcase-v1`, asset:
 
    ```text
@@ -72,28 +84,36 @@ under [GitHub's current package-visibility policy](https://docs.github.com/en/pa
    anonymous download and SHA/manifest verification. The image pipeline does
    not upload the ZIP or read any historical real-data pack.
 3. Source gates `PUBLIC_SAMPLE_ENABLED` and `PUBLIC_DEMO_ENABLED` are enabled.
-   This is not proof of a published image or a successful fresh-user Codespace.
+   Those flags alone are not proof of a successful fresh-user Codespace.
    The `demo-release` environment now requires maintainer approval and allows
    only the `main` branch. The maintainer explicitly approved same-account
    dispatch/review. App's Actions access to the Core package is **Read** only;
    the existing Codespaces Read grant and private package visibility are unchanged.
    These settings were read back after configuration on 2026-09-15; the YAML
    itself cannot establish the repository's environment-review rules.
-4. Dispatch `reviewed-demo-image` with the exact main SHA and `publish=false`.
-   Confirm build, non-root tests, Git and real Core restart checks. After approval,
-   dispatch with `publish=true`; the public sample gate runs first. Separately
-   approve/set visibility for **only the new demo package** and verify an
-   anonymous pull of its resulting digest. The workflow never changes visibility.
-5. Render a visitor config using the verified published digest:
+4. **Completed:** dry run `34920599185` and publish run `34920780180` passed at
+   App source `72634acb75669f90b8cf29bf0f1fd793a89f08aa`, including 86 image
+   tests, non-root Git/gh, Core 3.0.1 import/edit/restart and all-layer SSH checks.
+   The new package was separately approved and made public, followed by a
+   verified anonymous full download. The workflow never changes visibility.
+5. **Visitor config prepared:** the default config uses the verified published
+   digest, with the same non-root/forwarding policy as the stable build recipe.
+   Reproduce its output with:
 
    ```bash
    python scripts/render_codespaces_config.py --image ghcr.io/rka-project/rka-demo@sha256:<verified-digest>
    ```
 
-   Review its output before replacing `.devcontainer/devcontainer.json`. Keep
+   Review output before changing `.devcontainer/devcontainer.json`. Keep
    `.devcontainer/image/devcontainer.json` as the stable build recipe. The
-   renderer preserves non-root/forwarding policy and drops `build`/`features`;
-   those features already reside in the prebuilt image and its metadata.
+   renderer drops `build`, `features` and `postStartCommand`: the features and
+   single bootstrap hook already reside in the image's metadata. Lifecycle
+   hooks are accumulated, not overridden, so repeating the hook would run it
+   twice. The public-image consumer CI checks the real merged configuration
+   using Dev Containers CLI 0.89.0, anonymous Docker pull, installed App tests,
+   Git/gh and two Core sample/edit/restart cycles, without a new Codespace.
+   Require its green result on the exact PR head before merging.
+   See [Dev Container metadata merge rules](https://github.com/devcontainers/spec/blob/main/docs/specs/image-metadata.md#merge-logic).
 6. With approval for any billed resource, test a **fresh non-owner** Codespace:
    image/sample fetch, startup, Private browser access, denied signed-out/other-
    user access, both processes, Map/Graph/Missions, edit/export, stop/resume and
@@ -104,8 +124,10 @@ under [GitHub's current package-visibility policy](https://docs.github.com/en/pa
 
 The prebuild mechanism follows the [official Dev Container CI workflow](https://github.com/devcontainers/ci/blob/main/docs/github-action.md).
 It targets Codespaces Linux/amd64, not a general desktop release or local-Core
-installation change. A no-publication cloud build passed with Core 3.0.0;
-the final release candidate still needs its own image checks and publication.
+installation change. Changing the checkout does not update App code baked into
+the image; publish and review a new image before changing the consumer digest.
+The final Core 3.0.1 image checks/publication are recorded above; a real clean
+visitor Codespace remains a separate acceptance gate.
 
 ## Existing root-owned preview — preserve before migration
 
@@ -137,7 +159,11 @@ git -c safe.directory=/workspaces/rka-app -C /workspaces/rka-app status --short 
 
 The fresh-user test must confirm normal Git works without that exception.
 
-## Evidence and limits
+## Historical implementation evidence and limits
+
+The notes below preserve earlier batch results and then-pending gates. Current
+publication status is recorded above and in the image receipt; these historical
+failures do not imply the current public image is unavailable.
 
 Isolated local checks cover App unit tests/ruff and a released Core 3.0.0 CLI
 smoke: temporary data/ports, import, reuse after editing/restart, Map/Graph/Missions
@@ -236,6 +262,6 @@ or separately approved registry access before deployment.
 
 The Core dependency lock is unchanged. `npm audit` reports pre-existing dependency
 advisories; this targeted patch is not a dependency-security clearance and does
-not perform broad upgrades. Public sample availability is verified; public image
-availability, new-user cold create, root-state migration and other-user browser
-authorization are not yet verified.
+not perform broad upgrades. Public sample and image availability are now verified;
+new-user cold create, root-state migration and other-user browser authorization
+are not yet verified.
