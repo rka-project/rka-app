@@ -87,6 +87,58 @@ class HealthTests(unittest.TestCase):
 
 
 class LifecycleTests(unittest.TestCase):
+    def test_runtime_guard_failure_stops_both_owned_children(self) -> None:
+        settings = Settings("127.0.0.1", 17860, True, 1, 2, 0.001, ("rka",))
+        server, worker = MagicMock(pid=101), MagicMock(pid=102)
+        server.poll.return_value = worker.poll.return_value = None
+        started = MagicMock()
+        with (
+            patch("rka_app.supervisor.signal.signal"),
+            patch("rka_app.supervisor._health_ready", return_value=True),
+            patch("rka_app.supervisor._start", side_effect=[server, worker]),
+            patch("rka_app.supervisor._stop") as stop,
+            self.assertRaisesRegex(ValueError, "privacy unavailable"),
+        ):
+            supervise(
+                settings,
+                on_started=started,
+                on_tick=MagicMock(side_effect=ValueError("privacy unavailable")),
+            )
+        started.assert_called_once_with()
+        stop.assert_has_calls([call(worker, "worker", 2), call(server, "server", 2)])
+
+    def test_worker_start_failure_never_reports_running(self) -> None:
+        settings = Settings("127.0.0.1", 17860, True, 1, 2, 0.001, ("rka",))
+        server, worker = MagicMock(pid=101), MagicMock(pid=102)
+        server.poll.return_value = None
+        worker.poll.return_value = 7
+        started = MagicMock()
+        with (
+            patch("rka_app.supervisor.signal.signal"),
+            patch("rka_app.supervisor._health_ready", return_value=True),
+            patch("rka_app.supervisor._start", side_effect=[server, worker]),
+            patch("rka_app.supervisor._stop"),
+        ):
+            self.assertEqual(supervise(settings, on_started=started), 7)
+        started.assert_not_called()
+
+    def test_initialization_failure_stops_owned_server_without_starting_worker(self) -> None:
+        settings = Settings("127.0.0.1", 17860, True, 1, 2, 0.001, ("rka",))
+        server = MagicMock(pid=101)
+        server.poll.return_value = None
+        callback = MagicMock(side_effect=ValueError("fixture import failure"))
+        with (
+            patch("rka_app.supervisor.signal.signal"),
+            patch("rka_app.supervisor._health_ready", return_value=True),
+            patch("rka_app.supervisor._start", return_value=server) as start,
+            patch("rka_app.supervisor._stop") as stop,
+            self.assertRaisesRegex(ValueError, "fixture import failure"),
+        ):
+            supervise(settings, on_ready=callback)
+        start.assert_called_once_with(settings.server_command, "server")
+        stop.assert_any_call(server, "server", settings.shutdown_timeout)
+        callback.assert_called_once_with()
+
     def test_worker_failure_stops_server_and_propagates_code(self) -> None:
         settings = Settings(
             host="127.0.0.1",
@@ -100,7 +152,7 @@ class LifecycleTests(unittest.TestCase):
         server = MagicMock(pid=101)
         server.poll.return_value = None
         worker = MagicMock(pid=102)
-        worker.poll.return_value = 7
+        worker.poll.side_effect = [None, 7]
 
         with (
             patch("rka_app.supervisor.signal.signal"),

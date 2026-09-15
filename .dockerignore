@@ -9,3 +9,9 @@ artifacts
 docs
 scripts
 tests
+.demo-input
+**/*.rka-pack.zip
+**/*.db
+**/*.db-*
+**/.env
+**/.env.*

@@ -17,7 +17,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
 # The readiness target is always the server in this same container. Host or CI
@@ -150,7 +150,13 @@ def _stop(process: subprocess.Popen[bytes] | None, role: str, timeout: float) ->
         process.wait(timeout=5)
 
 
-def supervise(settings: Settings) -> int:
+def supervise(
+    settings: Settings,
+    *,
+    on_ready: Callable[[], None] | None = None,
+    on_started: Callable[[], None] | None = None,
+    on_tick: Callable[[], None] | None = None,
+) -> int:
     stop_requested = threading.Event()
 
     def request_stop(signum: int, _frame: object) -> None:
@@ -182,10 +188,25 @@ def supervise(settings: Settings) -> int:
         if stop_requested.is_set():
             return 0
 
+        # Optional App adapter work, after health and before the worker. Any
+        # failure still executes the same owned-child cleanup in finally.
+        if on_ready is not None:
+            on_ready()
+        if stop_requested.is_set():
+            return 0
+
         if settings.worker_enabled:
             worker = _start(settings.worker_command, "worker")
         else:
             _log("worker disabled by RKA_APP_WORKER_ENABLED=false")
+
+        server_code = server.poll()
+        worker_code = worker.poll() if worker is not None else None
+        if server_code is not None or worker_code is not None:
+            _log("child exited during startup; not reporting running")
+            return (server_code if server_code is not None else worker_code) or 1
+        if on_started is not None:
+            on_started()
 
         while not stop_requested.wait(settings.health_interval):
             server_code = server.poll()
@@ -199,6 +220,8 @@ def supervise(settings: Settings) -> int:
                     _log(f"worker exited unexpectedly with code {worker_code}")
                     exit_code = worker_code or 1
                     break
+            if on_tick is not None:
+                on_tick()
     finally:
         _stop(worker, "worker", settings.shutdown_timeout)
         _stop(server, "server", settings.shutdown_timeout)

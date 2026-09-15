@@ -216,3 +216,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Owner-reviewed demo inputs and runtime state must not be published.
+.demo-input/
+*.rka-pack.zip
+*.db
+*.db-*
