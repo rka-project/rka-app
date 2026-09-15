@@ -12,9 +12,10 @@ from rka_app.codespaces_privacy import PrivatePortGuard
 from rka_app.demo_runtime import namespace_lock
 from rka_app.demo_seed import SHOWCASE, SeedError, write_receipt
 
-# Independent of sample publication: enable only after the released Core fix,
-# reviewed App merge and prebuilt non-root image have passed their release gates.
-PUBLIC_DEMO_ENABLED = False
+# Source gate opened after the Core 3.0.1 release and non-root image checks.
+# Publishing this exact candidate still requires its own image tests and review;
+# anonymous pull and fresh/non-owner Codespace acceptance gate the homepage link.
+PUBLIC_DEMO_ENABLED = True
 
 
 def bootstrap(name: str) -> str:

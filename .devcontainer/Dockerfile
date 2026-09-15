@@ -1,11 +1,15 @@
-# Core v3.0.0; publish-container run 34520774150, runtime index digest.
+# Core v3.0.1; publish-container run 34918034712, attempt 2, runtime index digest.
 # Registry pull access must be verified before rebuilding an existing Codespace.
-FROM ghcr.io/rka-project/rka-core@sha256:f35123dd117e34c9344df022594fbec1bffb42d50a8f2a53d78e58837987a14b
+FROM ghcr.io/rka-project/rka-core@sha256:19a7ac4098e536930d395a1730ad5b57b082f769e784b40221312bc93cad00f7
 
+# Do not mislabel App source with the inherited Core revision/version.
+ARG RKA_APP_REVISION=unreleased
 LABEL org.opencontainers.image.title="RKA user-owned demo" \
       org.opencontainers.image.source="https://github.com/rka-project/rka-app" \
       org.opencontainers.image.licenses="MIT" \
-      org.rka.core.image-ref="ghcr.io/rka-project/rka-core@sha256:f35123dd117e34c9344df022594fbec1bffb42d50a8f2a53d78e58837987a14b"
+      org.opencontainers.image.version="0.0.1" \
+      org.opencontainers.image.revision="${RKA_APP_REVISION}" \
+      org.rka.core.image-ref="ghcr.io/rka-project/rka-core@sha256:19a7ac4098e536930d395a1730ad5b57b082f769e784b40221312bc93cad00f7"
 
 # Tools needed by the development container, not a second RKA runtime.
 RUN apt-get update \

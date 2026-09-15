@@ -4,14 +4,15 @@ Status: **owner-private operator preview, not a public one-click deployment**.
 RKA App owns this adapter. Released Core owns all data and public APIs.
 RKA remains local-first; this is not a shared hosted service.
 
-**Next-batch source changes are not deployed:** non-root user, bounded port
-registration waiting, gated sample downloading and the prebuilt-image pipeline.
+**Release candidate, not deployed in the existing owner Codespace:** non-root
+user, per-container SSH identity, bounded port waiting, sample fetching and
+automatic first-use setup. Core 3.0.1 supplies truthful keyword-only status.
 See [distribution/migration](demo-distribution.md) before rebuilding the existing
 root-owned preview. Historical cloud evidence below applies to batch 3 only.
 
 ## Implemented in this candidate
 
-- Immutable Core 3.0.0 image reference, loopback port 7860, isolated persistent
+- Immutable Core 3.0.1 image reference, loopback port 7860, isolated persistent
   namespace under `/workspaces/.rka-codespaces-demo/<CODESPACE_NAME>/`.
 - Explicit Codespaces identity gate. Manual mode's private-port flag is an
   operator assertion, **not** an automatic GitHub access-control check.
@@ -26,8 +27,9 @@ root-owned preview. Historical cloud evidence below applies to batch 3 only.
 - Optional sample import after health/version validation and before worker start.
   A pinned SHA-256 and bounded manifest-only ZIP check precede the public REST
   import. No Core imports, direct DB access or archive extraction. The fictional
-  sample is now published and its downloader enabled; automatic public runtime
-  setup remains independently gated off pending the image release.
+  sample is published and first-use provisioning is enabled in the candidate.
+  Final image publication, anonymous pull and clean visitor acceptance remain
+  required; an enabled source flag does not prove those external results.
 - Durable import intent before POST; successful response and project readback
   before a ready receipt. Restart reuses that project without reimporting,
   renaming, comparing edited counts, or requiring the original ZIP.
@@ -45,7 +47,7 @@ root-owned preview. Historical cloud evidence below applies to batch 3 only.
   rebuilt owner Codespace's effective `sshd -T` configuration matched these
   settings; only port 7860 appeared in its forwarded-port inventory.
 
-## Private operator validation
+## Historical private operator validation (Core 3.0.0, 2026-09-14)
 
 First inspect the intended Codespace, retain existing work, and verify the pinned
 Core image can be pulled. Do not create another billed instance as a workaround.
@@ -198,13 +200,14 @@ archive remains separate, unchanged, and not approved for public distribution.
 
 ## Public release gates — still required
 
-1. Merge/release the reviewed App substrate; remote main is not this checkout.
+1. The reviewed App substrate and SSH identity fix are merged. Release the exact
+   Core 3.0.1-based image through the approved environment after its own image tests.
 2. Public distribution of a separate demo image and fictional ZIP is approved;
    the existing Core package must remain private. Build/verify the new image and
    test a non-owner account before enabling the public visitor path.
 3. Completed: exact sample publication, anonymous verification and local download
    gate. No arbitrary URL input, credentials, archive extraction or `latest`
-   fallback. The public runtime gate remains closed.
+   fallback. The source runtime gate is open, not the homepage visitor path.
 4. Extend the successful existing-owner private startup/resume checks to a clean
    new visitor Codespace: lifecycle identity/auth and forwarding registration
    order. Validate remote failure shutdown without introducing public exposure.

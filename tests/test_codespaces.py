@@ -15,6 +15,7 @@ from rka_app.codespaces import (
     main,
     prepare_state,
 )
+from rka_app.demo_seed import SHOWCASE
 from rka_app.supervisor import Settings
 
 
@@ -208,8 +209,9 @@ class CodespacesTests(unittest.TestCase):
             "1000",
         )
         dockerfile = (repo / ".devcontainer/Dockerfile").read_text()
+        self.assertEqual(SHOWCASE.core_version, "3.0.1")
         self.assertIn(
-            "@sha256:f35123dd117e34c9344df022594fbec1bffb42d50a8f2a53d78e58837987a14b",
+            "@sha256:19a7ac4098e536930d395a1730ad5b57b082f769e784b40221312bc93cad00f7",
             dockerfile,
         )
         self.assertIn('CMD ["sleep", "infinity"]', dockerfile)
