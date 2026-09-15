@@ -154,6 +154,14 @@ failed before running; nothing was published. The follow-up uses the checked
 native Linux/X64 runner, inspects the locally loaded image/architecture, and
 sets `docker run --pull never` so missing local output cannot trigger a pull.
 
+Second dry run `34917101541` loaded the Linux/amd64 image and passed all 80 tests
+inside it as `codespace`. The subsequent shell check failed; it incorrectly
+required `/usr/local/bin/gh`, whereas the feature installs the official Debian
+package. The follow-up checks the same trusted PATH as the runtime privacy guard,
+executes/verifies GitHub CLI 2.98.0, and prints non-sensitive identity/tool-path
+readbacks. All-source Git wildcard rejection and the real Git operation remain
+required. The Core import/restart image smoke has not passed yet.
+
 A local prebuilt-image validation was attempted with Dev Containers CLI 0.89.0
 using the exact private Core digest and a unique test tag, without `--push` or
 any runtime/container start. GHCR returned **401 authentication required** before
