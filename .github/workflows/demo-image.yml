@@ -122,6 +122,13 @@ jobs:
             "$DEMO_IMAGE" -B /verify-scripts/demo_seed_smoke.py --isolated-container \
             --core-cli /app/.venv/bin/rka --sqlite-vec /usr/local/lib/vec0.so \
             --sample-pack /sample/reviewed-showcase.rka-pack.zip
+      - name: Reject baked SSH keys and verify per-container identity
+        env:
+          DEMO_IMAGE: ghcr.io/rka-project/rka-demo:sha-${{ github.sha }}-run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: >-
+          python scripts/demo_ssh_smoke.py
+          --image "$DEMO_IMAGE"
+          --run-label "$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
       - name: Publish only the exact tested image; never latest
         if: inputs.publish
         env:

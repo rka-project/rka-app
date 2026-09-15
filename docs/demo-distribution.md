@@ -12,6 +12,11 @@ pack, credential, local database or model cache is part of this distribution.
   Git wildcard trust entry or recursive workspace/database ownership rewrite.
 - Owned state must belong to the current OS user and be mode 0700. Old root-owned
   state is retained and refused, not silently adopted.
+- SSH host keys are generated on the first container start and retained on its
+  later starts. The base installs SSH packages and removes generated keys in
+  that same layer; an ordered local feature replaces only the upstream startup
+  hook. Publication requires an all-layer key absence check and two disposable
+  containers with distinct public fingerprints and unchanged key-only policy.
 - First setup/resume retries absent port registration for up to 60 seconds plus
   a final bounded CLI query (15 seconds). Public/org, duplicate/malformed results,
   missing authorization and CLI errors fail immediately. Core does not start
@@ -96,7 +101,8 @@ under [GitHub's current package-visibility policy](https://docs.github.com/en/pa
 
 The prebuild mechanism follows the [official Dev Container CI workflow](https://github.com/devcontainers/ci/blob/main/docs/github-action.md).
 It targets Codespaces Linux/amd64, not a general desktop release or local-Core
-installation change. Workflow publication and cloud image build remain untested.
+installation change. A no-publication cloud build passed with Core 3.0.0;
+the final release candidate still needs its own image checks and publication.
 
 ## Existing root-owned preview — preserve before migration
 
@@ -160,7 +166,35 @@ required `/usr/local/bin/gh`, whereas the feature installs the official Debian
 package. The follow-up checks the same trusted PATH as the runtime privacy guard,
 executes/verifies GitHub CLI 2.98.0, and prints non-sensitive identity/tool-path
 readbacks. All-source Git wildcard rejection and the real Git operation remain
-required. The Core import/restart image smoke has not passed yet.
+required. At that point the Core import/restart image smoke had not passed yet.
+
+Third dry run `34917625751`, exact main
+`17b71a26c793f37f581e336e27f1b6050042443c`, **passed** without publication:
+all 80 image unit tests; UID/GID 1000 `codespace`; Git init/status without a
+wildcard exception; GitHub CLI 2.98.0 at `/usr/bin/gh`; two real Core 3.0.0
+cycles importing/reusing the pinned synthetic sample through REST, lexical
+capabilities/search, Map/Graph/Missions, edit/export and preserved content after
+restart. Containers had no external network or published port. This proves the
+non-root image recipe, not a fresh/non-owner Codespace or the pending 3.0.1 pin.
+
+Core PR #165 passed all ten CI jobs at
+`692fa3a139cc4f806b69c5782c81155f083bbbef`: 3,906 Core tests passed, with one
+skip and 294 intentional profile deselections. It merged at
+`cd260223de27b0e4890ae666272a88bcd1ffd7b1`, and release `v3.0.1` was published.
+The App's isolated CLI smoke also passed two cycles with Core 3.0.1, including
+sample import/reuse, lexical capabilities, Map/Graph/Missions, edit/export and
+retained edits after restart. Protected local production containers were
+unchanged. This CLI result is not a published-image or cold-Codespace result.
+
+The third dry-run build log also revealed that sshd feature 1.1.0 generated
+default host keys in its final build layer. Its startup hook starts SSH without
+re-keying. A public copy of that image could therefore expose a shared server
+identity to anyone who pulls it. It was never pushed. The follow-up installs
+and removes those keys in one base layer, fails if feature installation creates
+any again, and generates missing keys at container startup. Five regression
+tests cover layer scanning (including a later-layer deletion), configuration
+false positives and ordering. All-layer and real SSH startup validation are
+mandatory before publication; unit tests alone do not prove this fix in an image.
 
 A local prebuilt-image validation was attempted with Dev Containers CLI 0.89.0
 using the exact private Core digest and a unique test tag, without `--push` or
