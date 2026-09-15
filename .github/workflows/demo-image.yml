@@ -91,11 +91,20 @@ jobs:
             -B -m unittest discover -s tests -q
           docker run --pull never --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-git" --user codespace --env HOME=/home/codespace --entrypoint /bin/bash "$DEMO_IMAGE" -c '
             set -eu
+            id
             test "$(id -u)" = 1000
             test "$(id -un)" = codespace
             test -x /app/.venv/bin/rka
-            test -x /usr/local/bin/gh
-            test "$(git config --global --get-all safe.directory || true)" != "*"
+            # Same trusted search path as the runtime privacy guard. The pinned
+            # feature installs a Debian package, not a /usr/local/bin archive.
+            export PATH=/usr/local/bin:/usr/bin:/bin
+            command -v gh
+            gh --version
+            gh --version | grep -Eq "^gh version 2[.]98[.]0 "
+            if git config --get-all safe.directory | grep -Fxq "*"; then
+              echo "Refusing a global Git trust wildcard"
+              exit 1
+            fi
             demo_git_dir=$(mktemp -d)
             git init -q "$demo_git_dir"
             git -C "$demo_git_dir" status --porcelain

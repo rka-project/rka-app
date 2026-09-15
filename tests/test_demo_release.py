@@ -59,6 +59,9 @@ class TemplateTests(unittest.TestCase):
         self.assertNotIn("platform: linux/amd64", workflow)
         self.assertEqual(workflow.count("docker run --pull never"), 3)
         self.assertIn('docker image inspect "$DEMO_IMAGE"', workflow)
+        self.assertIn("export PATH=/usr/local/bin:/usr/bin:/bin", workflow)
+        self.assertIn("command -v gh", workflow)
+        self.assertNotIn("test -x /usr/local/bin/gh", workflow)
         self.assertIn("-run-${{ github.run_id }}-${{ github.run_attempt }}", workflow)
         self.assertNotIn("rka-demo:latest", workflow)
         for line in workflow.splitlines():
