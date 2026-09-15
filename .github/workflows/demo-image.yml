@@ -42,6 +42,7 @@ jobs:
         run: |
           test "$EXPECTED_HEAD" = "$GITHUB_SHA"
           test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+          test "$RUNNER_OS/$RUNNER_ARCH" = "Linux/X64"
       - name: Fetch the verified public sample into runner temporary storage
         env:
           PYTHONPATH: src
@@ -76,16 +77,19 @@ jobs:
           configFile: .devcontainer/image/devcontainer.json
           push: never
           inheritEnv: false
-          platform: linux/amd64
+          # On this action, explicit platform + push=never exports OCI only.
+          # The checked native runner builds AND loads a Linux/amd64 image.
       - name: Test the built image as its non-root development user
         env:
           DEMO_IMAGE: ghcr.io/rka-project/rka-demo:sha-${{ github.sha }}-run-${{ github.run_id }}-${{ github.run_attempt }}
         run: |
-          docker run --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-unit" --user codespace --entrypoint /app/.venv/bin/python \
+          docker image inspect "$DEMO_IMAGE" --format '{{.Id}} {{.Os}}/{{.Architecture}}'
+          test "$(docker image inspect "$DEMO_IMAGE" --format '{{.Os}}/{{.Architecture}}')" = "linux/amd64"
+          docker run --pull never --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-unit" --user codespace --entrypoint /app/.venv/bin/python \
             --mount "type=bind,source=$GITHUB_WORKSPACE,target=/verify,readonly" \
             --workdir /verify --env HOME=/home/codespace --env PYTHONPATH=/verify/src "$DEMO_IMAGE" \
             -B -m unittest discover -s tests -q
-          docker run --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-git" --user codespace --env HOME=/home/codespace --entrypoint /bin/bash "$DEMO_IMAGE" -c '
+          docker run --pull never --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-git" --user codespace --env HOME=/home/codespace --entrypoint /bin/bash "$DEMO_IMAGE" -c '
             set -eu
             test "$(id -u)" = 1000
             test "$(id -un)" = codespace
@@ -102,7 +106,7 @@ jobs:
         run: |
           # No published port, credential environment, Docker socket or persistent volume.
           # Only the reviewed fictional ZIP is mounted; all writes stay disposable.
-          docker run --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-runtime" \
+          docker run --pull never --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-runtime" \
             --user codespace --entrypoint /app/.venv/bin/python --env HOME=/home/codespace \
             --mount "type=bind,source=$GITHUB_WORKSPACE/scripts,target=/verify-scripts,readonly" \
             --mount "type=bind,source=$RUNNER_TEMP/reviewed-demo-sample,target=/sample,readonly" \
