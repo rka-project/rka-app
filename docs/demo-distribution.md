@@ -196,6 +196,23 @@ tests cover layer scanning (including a later-layer deletion), configuration
 false positives and ordering. All-layer and real SSH startup validation are
 mandatory before publication; unit tests alone do not prove this fix in an image.
 
+SSH follow-up PR #5 passed all seven CI jobs and merged at
+`1c0c957366d0201f1979564be3cf0067b789233e`. Dry run `34919358687` at that exact
+main commit **passed without publication**: 85 image unit tests, non-root Git/gh
+checks, two Core 3.0.0 sample/edit/restart cycles, every saved image layer free
+of host key files, two containers with distinct public SSH fingerprints and
+stable identities on repeat startup. Password/interactive authentication stayed
+disabled and GatewayPorts stayed off. This validates the SSH fix, not a final
+Core 3.0.1 image or new/non-owner Codespace.
+
+Core publication run `34918034712`, attempt 1, was cancelled after its ARM64
+`npm ci` stopped progressing. The retained complete log exposes
+`qemu: uncaught target signal 4 (Illegal instruction)` in the ARM64 web-builder
+stage. No 3.0.1 image had been published; package versions and private visibility
+were read back. One retry of the same release commit was dispatched without
+changing the tag, source or validation gates. Do not replace App's Core digest
+until a complete successful publication and exact-digest validation are recorded.
+
 A local prebuilt-image validation was attempted with Dev Containers CLI 0.89.0
 using the exact private Core digest and a unique test tag, without `--push` or
 any runtime/container start. GHCR returned **401 authentication required** before
