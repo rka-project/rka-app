@@ -1,0 +1,36 @@
+{
+  "name": "RKA private Codespaces demo (experimental)",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "overrideCommand": true,
+  "remoteUser": "codespace",
+  "updateRemoteUserUID": true,
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2.5.9": {
+      "username": "codespace",
+      "userUid": "1000",
+      "userGid": "1000",
+      "installZsh": false,
+      "installOhMyZsh": false,
+      "installOhMyZshConfig": false,
+      "upgradePackages": false
+    },
+    "ghcr.io/devcontainers/features/sshd:1.1.0": { "gatewayPorts": "no" },
+    "ghcr.io/devcontainers/features/github-cli:1.1.2": { "version": "2.98.0" }
+  },
+  "postStartCommand": ["/app/.venv/bin/python", "-m", "rka_app.codespaces_bootstrap"],
+  "customizations": {
+    "codespaces": { "openFiles": ["WELCOME.md"] }
+  },
+  "forwardPorts": [7860],
+  "portsAttributes": {
+    "7860": {
+      "label": "RKA owner-private demo — keep visibility Private",
+      "onAutoForward": "notify",
+      "requireLocalPort": false
+    }
+  },
+  "otherPortsAttributes": {"onAutoForward": "ignore"}
+}

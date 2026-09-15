@@ -1,0 +1,121 @@
+name: reviewed-demo-image
+
+# Never publish from a PR or automatically on push. This is a maintainer release
+# operation, not permission to change package visibility or upload sample data.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_head:
+        description: Exact reviewed main commit (40 hexadecimal characters)
+        required: true
+        type: string
+      publish:
+        description: Publish the tested image to the separately approved rka-demo package
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: reviewed-demo-image
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.repository == 'rka-project/rka-app' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    # Configure required reviewers on this environment before first publication.
+    environment: demo-release
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Verify the exact reviewed head
+        env:
+          EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          test "$EXPECTED_HEAD" = "$GITHUB_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+      - name: Fetch the verified public sample into runner temporary storage
+        env:
+          PYTHONPATH: src
+        run: |
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from rka_app.demo_distribution import download_sample
+          sample_dir = Path(os.environ["RUNNER_TEMP"]).resolve() / "reviewed-demo-sample"
+          sample_dir.mkdir(mode=0o755)
+          sample = download_sample(sample_dir)
+          sample.chmod(0o644)  # Approved public ZIP; readable by the container's non-root UID.
+          print(sample)
+          PY
+      - name: Verify runtime release gate before any image publication
+        if: inputs.publish
+        env:
+          PYTHONPATH: src
+        run: |
+          python -c 'from rka_app.demo_distribution import PUBLIC_SAMPLE_ENABLED; from rka_app.codespaces_bootstrap import PUBLIC_DEMO_ENABLED; assert PUBLIC_SAMPLE_ENABLED and PUBLIC_DEMO_ENABLED, "Public sample or runtime release gate is closed"'
+      - uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the full development image, including features (no lifecycle run)
+        uses: devcontainers/ci@513af61f4de4f75d37e4438f184ba4358f0fc1ca
+        with:
+          imageName: ghcr.io/rka-project/rka-demo
+          imageTag: sha-${{ github.sha }}-run-${{ github.run_id }}-${{ github.run_attempt }}
+          configFile: .devcontainer/image/devcontainer.json
+          push: never
+          inheritEnv: false
+          platform: linux/amd64
+      - name: Test the built image as its non-root development user
+        env:
+          DEMO_IMAGE: ghcr.io/rka-project/rka-demo:sha-${{ github.sha }}-run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          docker run --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-unit" --user codespace --entrypoint /app/.venv/bin/python \
+            --mount "type=bind,source=$GITHUB_WORKSPACE,target=/verify,readonly" \
+            --workdir /verify --env HOME=/home/codespace --env PYTHONPATH=/verify/src "$DEMO_IMAGE" \
+            -B -m unittest discover -s tests -q
+          docker run --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-git" --user codespace --env HOME=/home/codespace --entrypoint /bin/bash "$DEMO_IMAGE" -c '
+            set -eu
+            test "$(id -u)" = 1000
+            test "$(id -un)" = codespace
+            test -x /app/.venv/bin/rka
+            test -x /usr/local/bin/gh
+            test "$(git config --global --get-all safe.directory || true)" != "*"
+            demo_git_dir=$(mktemp -d)
+            git init -q "$demo_git_dir"
+            git -C "$demo_git_dir" status --porcelain
+          '
+      - name: Exercise real Core import, lexical search, views and restart in the image
+        env:
+          DEMO_IMAGE: ghcr.io/rka-project/rka-demo:sha-${{ github.sha }}-run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          # No published port, credential environment, Docker socket or persistent volume.
+          # Only the reviewed fictional ZIP is mounted; all writes stay disposable.
+          docker run --rm --network none --label org.rka.demo.ci="$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT-runtime" \
+            --user codespace --entrypoint /app/.venv/bin/python --env HOME=/home/codespace \
+            --mount "type=bind,source=$GITHUB_WORKSPACE/scripts,target=/verify-scripts,readonly" \
+            --mount "type=bind,source=$RUNNER_TEMP/reviewed-demo-sample,target=/sample,readonly" \
+            "$DEMO_IMAGE" -B /verify-scripts/demo_seed_smoke.py --isolated-container \
+            --core-cli /app/.venv/bin/rka --sqlite-vec /usr/local/lib/vec0.so \
+            --sample-pack /sample/reviewed-showcase.rka-pack.zip
+      - name: Publish only the exact tested image; never latest
+        if: inputs.publish
+        env:
+          DEMO_IMAGE: ghcr.io/rka-project/rka-demo:sha-${{ github.sha }}-run-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          # A distinct tag per run/attempt avoids reusing tags between releases.
+          # Consumers must use the resulting digest, not this mutable registry tag.
+          docker push "$DEMO_IMAGE"
+          docker image inspect "$DEMO_IMAGE" --format '{{json .RepoDigests}}'
+          echo 'Record the rka-demo digest, verify anonymous pull, then render the visitor template.'
